@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-
+screenshot_count = 1
 live = cv2.VideoCapture(0)
 
 colors = {
@@ -14,12 +14,19 @@ bgr_colors = {
     "Blue": (255, 0, 0),
     "Yellow": (0, 255, 255)
 }
-
+trails = {
+    "Green": [],
+    "Blue": [],
+    "Yellow": []
+}
 
 while True:
     ret, frame = live.read()
     if not ret:
         break
+    frame = cv2.flip(frame, 1)
+    frame = cv2.resize(frame, (1280, 720))
+    
     
     live_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     for name, (lower, upper) in colors.items():
@@ -74,12 +81,29 @@ while True:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, 
                     (255, 255, 255), 2)
     
-    
-    
+                if trails[name]:
+                    prev_x, prev_y = trails[name][-1]
+                    distance = ((center_x - prev_x)**2 +
+                                (center_y - prev_y)**2)**0.5
+                    if distance > 100:
+                        trails[name].clear()
+                        
+                trails[name].append((center_x, center_y))
+                if len(trails[name]) > 30:
+                    trails[name].pop(0)
+
+                for i in range(1, len(trails[name])):
+                    previous = trails[name][i - 1]
+                    current = trails[name][i]
+                    cv2.line(frame, previous, current, bgr_colors[name], 3)
     
     
     cv2.imshow("Camera", frame)
-    if cv2.waitKey(1) & 0xFF == ord("q"):
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord("s"):
+        cv2.imwrite(f"Screenshot_{screenshot_count}.png", frame)
+        screenshot_count += 1
+    elif key == ord("q"):
         break
 
 
